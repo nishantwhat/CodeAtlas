@@ -27,7 +27,7 @@ def test_valid_compilation_db(tmp_path: Path):
     ingestor = CompilationDatabaseIngestor(db_path)
     source = ingestor.ingest(src_file)
 
-    assert source.path == src_file.resolve()
+    assert source.source_path == src_file.resolve()
     assert source.language == Language.C
     assert "-Iinclude" in source.compiler_flags
     assert "-Wall" in source.compiler_flags
@@ -50,9 +50,11 @@ def test_source_absent_from_compilation_db(tmp_path: Path):
     ]
     db_path.write_text(json.dumps(db_content))
 
-    ingestor = CompilationDatabaseIngestor(db_path)
+    # Pass strict=True to enforce the compilation database constraint
+    ingestor = CompilationDatabaseIngestor(db_path, strict=True)
     with pytest.raises(CompilationDatabaseError, match="not found in compilation database"):
         ingestor.ingest(src_file)
+
 
 
 def test_missing_compilation_db(tmp_path: Path):
