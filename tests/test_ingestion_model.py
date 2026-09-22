@@ -1,31 +1,36 @@
-"""Unit tests for source ingestion models."""
+"""Tests for ingestion models and domain targets."""
 
 from pathlib import Path
 import pytest
-from program_graph.analysis.ingestion import Language, SourceFile
+from pydantic import ValidationError
+
+from program_graph.analysis.ingestion import (
+    CompilationContext,
+    Language,
+    TranslationUnitTarget,
+)
 
 
-def test_source_file_model_initialization(tmp_path: Path):
-    test_file = tmp_path / "main.c"
-    test_file.touch()
+def test_translation_unit_target_creation(tmp_path: Path):
+    """Verify TranslationUnitTarget initialization and path resolution."""
+    dummy_file = tmp_path / "main.cpp"
+    dummy_file.touch()
 
-    source = SourceFile(
-        path=test_file,
-        language=Language.C,
-        compiler_flags=["-Iinclude", "-Wall"],
-    )
-
-    assert source.path == test_file.resolve()
-    assert source.language == Language.C
-    assert source.compiler_flags == ["-Iinclude", "-Wall"]
-    assert source.exists is True
-
-
-def test_source_file_non_existent(tmp_path: Path):
-    missing_file = tmp_path / "missing.cpp"
-    source = SourceFile(
-        path=missing_file,
+    target = TranslationUnitTarget(
+        source_path=dummy_file,
         language=Language.CPP,
+        compilation_context=CompilationContext(arguments=["-std=c++17"]),
     )
 
-    assert source.exists is False
+    assert target.source_path == dummy_file.resolve()
+    assert target.language == Language.CPP
+    assert target.compilation_context.arguments == ["-std=c++17"]
+
+
+def test_translation_unit_target_path_validation():
+    """Verify validation requires a valid path type."""
+    with pytest.raises(ValidationError):
+        TranslationUnitTarget(
+            source_path=None,  # type: ignore
+            language=Language.C,
+        )
