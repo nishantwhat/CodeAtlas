@@ -109,8 +109,7 @@ class CompilationDatabaseIngestor:
 
             file_ref = Path(entry["file"])
             comp_dir = Path(entry.get("directory", self.db_path.parent))
-            
-            # Resolve relative file path using compilation directory
+
             abs_file = file_ref if file_ref.is_absolute() else (comp_dir / file_ref).resolve()
             self.entries[abs_file] = entry
 
@@ -122,11 +121,10 @@ class CompilationDatabaseIngestor:
         else:
             return []
 
-        # Omit compiler executable name and the source file argument itself
         flags: List[str] = []
         skip_next = False
-        
-        for idx, arg in enumerate(raw_args[1:], start=1):
+
+        for arg in raw_args[1:]:
             if skip_next:
                 skip_next = False
                 continue
@@ -161,3 +159,25 @@ class CompilationDatabaseIngestor:
             compiler_flags=flags,
             compilation_directory=comp_dir,
         )
+
+
+class ProjectIngestor:
+    """Unified ingestor interface for standalone files or compile_commands.json projects."""
+
+    def __init__(self, project_root: Optional[Path | str] = None):
+        self.project_root = Path(project_root).resolve() if project_root else None
+        self.comp_db_ingestor: Optional[CompilationDatabaseIngestor] = None
+        self.standalone_ingestor = StandaloneIngestor()
+
+        if self.project_root:
+            db_file = self.project_root / "compile_commands.json"
+            if db_file.exists():
+                self.comp_db_ingestor = CompilationDatabaseIngestor(db_file)
+
+    def ingest(self, file_path: Path | str, fallback_flags: Optional[List[str]] = None) -> SourceFile:
+        path = Path(file_path).resolve()
+
+        if self.comp_db_ingestor and path in self.comp_db_ingestor.entries:
+            return self.comp_db_ingestor.ingest(path)
+
+        return self.standalone_ingestor.ingest(path, default_flags=fallback_flags)  
