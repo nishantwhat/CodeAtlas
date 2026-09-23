@@ -1,8 +1,17 @@
 """Tests for AST extraction from C and C++ sources."""
 
 from pathlib import Path
+
+import pytest
+
 from program_graph.analysis.ast import ASTExtractor
-from program_graph.analysis.ingestion import SourceIngestor
+from program_graph.analysis.exceptions import ASTExtractionError
+from program_graph.analysis.ingestion import (
+    CompilationContext,
+    Language,
+    SourceIngestor,
+    TranslationUnitTarget,
+)
 
 
 def test_extract_c_ast(tmp_path: Path):
@@ -51,3 +60,17 @@ def test_extract_cpp_ast(tmp_path: Path):
     ]
     assert len(class_nodes) == 1
     assert class_nodes[0].spelling == "Calculator"
+
+
+def test_ast_extraction_missing_file_raises_error(tmp_path: Path):
+    """Verify ASTExtractor raises ASTExtractionError when source file does not exist."""
+    missing_file = tmp_path / "nonexistent.cpp"
+    target = TranslationUnitTarget(
+        source_path=missing_file,
+        language=Language.CPP,
+        compilation_context=CompilationContext(),
+    )
+
+    extractor = ASTExtractor()
+    with pytest.raises(ASTExtractionError, match="Source target file does not exist"):
+        extractor.extract(target)

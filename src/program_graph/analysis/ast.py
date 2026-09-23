@@ -2,17 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Iterator
 from pathlib import Path
-from typing import Any, Callable, Iterator, List, Optional, Set
+
 import clang.cindex
 from pydantic import BaseModel, ConfigDict, Field
 
+from program_graph.analysis.exceptions import ASTExtractionError
 from program_graph.analysis.ingestion import Language, TranslationUnitTarget
-
-
-class ASTExtractionError(Exception):
-    """Raised when libclang fails to extract or parse an AST."""
-    pass
 
 
 class SourceLocation(BaseModel):
@@ -21,7 +18,7 @@ class SourceLocation(BaseModel):
 
     line: int = Field(..., description="1-based line number")
     column: int = Field(..., description="1-based column number")
-    file_path: Optional[Path] = Field(default=None, description="Path to source file")
+    file_path: Path | None = Field(default=None, description="Path to source file")
 
 
 # Explicit alias for backwards compatibility
@@ -48,13 +45,18 @@ class ASTNode(BaseModel):
     kind: str
     spelling: str = ""
     display_name: str = ""
-    location: Optional[SourceLocation] = None
-    range: Optional[SourceRange] = None
-    type_spelling: Optional[str] = None
-    children: List[ASTNode] = Field(default_factory=list)
+    location: SourceLocation | None = None
+    range: SourceRange | None = None
+    type_spelling: str | None = None
+    children: list[ASTNode] = Field(default_factory=list)
+
+    @property
+    def node_id(self) -> int:
+        """Alias for node ID."""
+        return self.id
 
     def to_dict(self) -> dict:
-        """Serialize the node to a dictionary (expected by tests)."""
+        """Serialize the node to a dictionary representation."""
         return self.model_dump(by_alias=True)
 
 
@@ -64,13 +66,13 @@ class ASTRepresentation(BaseModel):
 
     target: TranslationUnitTarget
     root: ASTNode
-    diagnostics: List[str] = Field(default_factory=list)
+    diagnostics: list[str] = Field(default_factory=list)
 
 
 class ASTExtractor:
     """Parses source files into structured ASTRepresentation graphs via libclang."""
 
-    def __init__(self, libclang_path: Optional[str | Path] = None) -> None:
+    def __init__(self, libclang_path: str | Path | None = None) -> None:
         if libclang_path:
             clang.cindex.Config.set_library_file(str(libclang_path))
         self.index = clang.cindex.Index.create()
@@ -86,26 +88,17 @@ class ASTExtractor:
         include_headers: bool = False,
     ) -> ASTRepresentation:
         """Parse source file using target flags and return complete ASTRepresentation."""
+        if not target.source_path.exists():
+            raise ASTExtractionError(f"Source target file does not exist: {target.source_path}")
+
         self._node_id_counter = 0
-        raw_args = list(target.compilation_context.arguments)
-
-        # Filter out positional source file inputs from compiler arguments
-        args: List[str] = []
-        source_exts = {".c", ".h", ".cpp", ".hpp", ".cc", ".cxx", ".hh"}
-        target_resolved = target.source_path.resolve()
-
-        for arg in raw_args:
-            if not arg.startswith("-"):
-                p = Path(arg)
-                if p.suffix.lower() in source_exts or (p.is_absolute() and p.resolve() == target_resolved):
-                    continue
-            args.append(arg)
+        args = list(target.compilation_context.arguments)
 
         if "-x" not in args:
-            lang_flag = "c++" if target.language == Language.CPP or target.language.value == "cpp" else "c"
+            lang_flag = "c++" if target.language == Language.CPP else "c"
             args.extend(["-x", lang_flag])
 
-        source_str = str(target.source_path)
+        source_str = str(target.source_path.resolve())
 
         try:
             tu = self.index.parse(
@@ -154,7 +147,13 @@ class ASTExtractor:
             )
 
         extent = None
-        if cursor.extent and cursor.extent.start.file and cursor.extent.end.file:
+        if (
+            cursor.extent
+            and cursor.extent.start
+            and cursor.extent.start.file
+            and cursor.extent.end
+            and cursor.extent.end.file
+        ):
             extent = SourceRange(
                 start=SourceLocation(
                     line=cursor.extent.start.line,
@@ -168,12 +167,17 @@ class ASTExtractor:
                 ),
             )
 
-        children: List[ASTNode] = []
+        children: list[ASTNode] = []
         for child in cursor.get_children():
             if not include_headers and child.location and child.location.file:
-                child_file = Path(child.location.file.name).resolve()
-                if child_file != target_file:
-                    continue
+                try:
+                    child_file = Path(child.location.file.name).resolve()
+                    if child_file != target_file:
+                        continue
+                except (ValueError, OSError):
+                    # Handle invalid file paths gracefully without filtering valid nodes
+                    pass
+
             children.append(
                 self._build_node(
                     cursor=child,
@@ -198,11 +202,11 @@ class ASTExtractor:
 
 def find_nodes_by_kind(
     node: ASTNode,
-    kinds: Set[str] | List[str] | str,
-) -> List[ASTNode]:
+    kinds: set[str] | list[str] | str,
+) -> list[ASTNode]:
     """Find all nodes in subtree matching the given kind(s)."""
     target_kinds = {kinds} if isinstance(kinds, str) else set(kinds)
-    results: List[ASTNode] = []
+    results: list[ASTNode] = []
 
     if node.kind in target_kinds:
         results.append(node)

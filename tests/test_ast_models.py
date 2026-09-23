@@ -1,6 +1,7 @@
 """Tests for AST representation models."""
 
 from pathlib import Path
+
 from program_graph.analysis.ast import (
     ASTNode,
     ASTRepresentation,

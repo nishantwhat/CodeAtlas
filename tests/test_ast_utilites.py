@@ -1,6 +1,7 @@
 """Tests for AST search and traversal utilities."""
 
 from pathlib import Path
+
 from program_graph.analysis.ast import (
     ASTExtractor,
     find_nodes_by_kind,

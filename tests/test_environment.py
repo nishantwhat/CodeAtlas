@@ -1,10 +1,11 @@
 """Milestone 0 environment verification tests."""
 
+import logging
 import sys
-import pytest
+
 from program_graph.application.config import load_config
 from program_graph.application.logging import setup_logging
-import logging
+
 
 def test_python_version():
     """Verify runtime Python version is 3.11+."""
