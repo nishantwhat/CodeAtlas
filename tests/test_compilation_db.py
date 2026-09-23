@@ -2,7 +2,9 @@
 
 import json
 from pathlib import Path
+
 import pytest
+
 from program_graph.analysis.ingestion import (
     CompilationDatabaseError,
     CompilationDatabaseIngestor,

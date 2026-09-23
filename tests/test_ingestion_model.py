@@ -1,6 +1,7 @@
 """Tests for ingestion models and domain targets."""
 
 from pathlib import Path
+
 import pytest
 from pydantic import ValidationError
 

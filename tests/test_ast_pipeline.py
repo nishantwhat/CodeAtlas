@@ -2,8 +2,9 @@
 
 import json
 from pathlib import Path
+
 from program_graph.analysis.ast import ASTExtractor, find_nodes_by_kind
-from program_graph.analysis.ingestion import SourceIngestor
+from program_graph.analysis.ingestion import CompilationDatabaseIngestor
 
 
 def test_end_to_end_ingestion_and_ast_extraction(tmp_path: Path):
@@ -26,7 +27,7 @@ def test_end_to_end_ingestion_and_ast_extraction(tmp_path: Path):
     ]
     db_path.write_text(json.dumps(db_data))
 
-    ingestor = SourceIngestor(project_root=tmp_path)
+    ingestor = CompilationDatabaseIngestor(db_path)
     target = ingestor.ingest(cpp_file)
 
     extractor = ASTExtractor()

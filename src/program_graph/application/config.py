@@ -1,7 +1,8 @@
 """Centralized configuration loader using Pydantic."""
 
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
+
 import yaml
 from pydantic import BaseModel, Field
 
@@ -29,6 +30,6 @@ def load_config(config_path: Path | str | None = None) -> AppConfig:
         return AppConfig()
 
     with open(path, "r", encoding="utf-8") as f:
-        data: Dict[str, Any] = yaml.safe_load(f) or {}
+        data: dict[str, Any] = yaml.safe_load(f) or {}
 
     return AppConfig(**data)
