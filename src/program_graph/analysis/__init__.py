@@ -1,4 +1,4 @@
-"""Analysis module providing source ingestion, exception hierarchy, and AST extraction."""
+"""Analysis module providing source ingestion, AST extraction, CFG, DFG, UPR, and exception hierarchy."""
 
 from program_graph.analysis.ast import (
     ASTExtractor,
@@ -12,13 +12,34 @@ from program_graph.analysis.ast import (
     traverse_ast,
     walk_ast,
 )
+from program_graph.analysis.cfg import (
+    CFGBuilder,
+    CFGEdge,
+    CFGEdgeType,
+    CFGNode,
+    CFGNodeKind,
+    ControlFlowGraph,
+    build_cfgs_for_ast,
+)
+from program_graph.analysis.dfg import (
+    DataFlowGraph,
+    DefUseSite,
+    DefUseType,
+    DFGBuilder,
+    DFGEdge,
+    DFGEdgeType,
+    VariableSymbol,
+)
 from program_graph.analysis.exceptions import (
     ASTExtractionError,
+    CFGError,
     CompilationDatabaseError,
+    DFGError,
     IngestionError,
     ProgramGraphError,
     SourceNotFoundError,
     UnsupportedLanguageError,
+    UPRError,
 )
 from program_graph.analysis.ingestion import (
     CompilationContext,
@@ -27,15 +48,36 @@ from program_graph.analysis.ingestion import (
     SourceIngestor,
     TranslationUnitTarget,
 )
+from program_graph.analysis.upr import (
+    CallSite,
+    UnifiedProgramRepresentation,
+    build_upr,
+    extract_call_sites,
+)
 
 __all__ = [
     "ASTExtractionError",
     "ASTExtractor",
     "ASTNode",
     "ASTRepresentation",
+    "CFGBuilder",
+    "CFGEdge",
+    "CFGEdgeType",
+    "CFGError",
+    "CFGNode",
+    "CFGNodeKind",
+    "CallSite",
     "CompilationContext",
     "CompilationDatabaseError",
     "CompilationDatabaseIngestor",
+    "ControlFlowGraph",
+    "DFGBuilder",
+    "DFGEdge",
+    "DFGEdgeType",
+    "DFGError",
+    "DataFlowGraph",
+    "DefUseSite",
+    "DefUseType",
     "IngestionError",
     "Language",
     "ProgramGraphError",
@@ -46,7 +88,13 @@ __all__ = [
     "SourceRange",
     "SourceRangeInfo",
     "TranslationUnitTarget",
+    "UPRError",
+    "UnifiedProgramRepresentation",
     "UnsupportedLanguageError",
+    "VariableSymbol",
+    "build_cfgs_for_ast",
+    "build_upr",
+    "extract_call_sites",
     "find_nodes_by_kind",
     "traverse_ast",
     "walk_ast",

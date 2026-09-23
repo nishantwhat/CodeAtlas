@@ -23,3 +23,15 @@ class CompilationDatabaseError(IngestionError):
 
 class ASTExtractionError(IngestionError):
     """Raised when Clang fails to parse or extract the AST from a source target."""
+
+
+class CFGError(ProgramGraphError):
+    """Raised when control flow graph construction fails."""
+
+
+class DFGError(ProgramGraphError):
+    """Raised when data flow graph / def-use extraction fails."""
+
+
+class UPRError(ProgramGraphError):
+    """Raised when unified program representation assembly or serialization fails."""
